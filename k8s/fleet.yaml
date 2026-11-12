@@ -15,7 +15,7 @@ spec:
         spec:
           containers:
             - name: condor
-              image: 130841269953.dkr.ecr.us-east-1.amazonaws.com/condor-server:1.0
+              image: 130841269953.dkr.ecr.us-east-1.amazonaws.com/condor-server:fc6c08597b2ff1cc9c01b0e59877dfe0de801450
               ports:
                 - name: metrics   # lo leerá Prometheus en la práctica 3.4
                   containerPort: 9100
