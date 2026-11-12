@@ -1,0 +1,35 @@
+# Terraform (el estado local tiene datos de la cuenta: no se sube)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/lambda.zip
+crash.log
+
+# Secretos y credenciales
+key.json
+*.key
+*.crt
+*.pem
+.env
+config.json
+
+# Python / pruebas / resultados de carga
+__pycache__/
+.pytest_cache/
+*.pyc
+loadtest/*.csv
+loadtest/*.html
+loadtest/rampa.png
+loadtest/pico.png
+loadtest/stream.png
+bot_condor.zip
+
+# Material del curso (no se redistribuye)
+Unidad3_Infraestructura_y_despliegue_material_de_estudio.pdf
+
+# Editor / sistema
+.vscode/
+.DS_Store
+Thumbs.db
+*.bak

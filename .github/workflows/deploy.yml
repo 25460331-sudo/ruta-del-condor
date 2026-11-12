@@ -1,0 +1,50 @@
+name: condor-server-ci
+
+# Práctica 3.2 — CI/CD: prueba el servidor, construye la imagen y la publica en Amazon ECR.
+# Secretos necesarios en GitHub (Settings -> Secrets and variables -> Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  (clave de acceso del usuario IAM del laboratorio)
+#   AWS_SESSION_TOKEN                         (solo si tu cuenta usa credenciales temporales)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: condor-server
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Pruebas del servidor
+        working-directory: server
+        run: pip install -r requirements.txt pytest && pytest -q
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y publicar la imagen (etiqueta = commit)
+        working-directory: server
+        run: |
+          IMG=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}
+          docker build -t $IMG:${{ github.sha }} -t $IMG:latest .
+          docker push $IMG:${{ github.sha }}
+          docker push $IMG:latest
+          echo "Imagen publicada: $IMG:${{ github.sha }}"
+
+      # Paso 3 (despliegue a la flota): se hace a mano con
+      #   kubectl set image / sed en k8s/fleet.yaml + kubectl apply -f k8s/fleet.yaml
+      # Agones reemplaza los servidores libres y deja terminar las partidas en curso (drenado).

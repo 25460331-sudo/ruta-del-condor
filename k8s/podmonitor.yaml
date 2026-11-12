@@ -1,0 +1,11 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: condor-gameservers
+  namespace: default
+spec:
+  selector:
+    matchLabels: { agones.dev/role: gameserver }
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 5s

@@ -1,0 +1,12 @@
+apiVersion: autoscaling.agones.dev/v1
+kind: FleetAutoscaler
+metadata:
+  name: condor-autoscaler
+spec:
+  fleetName: condor-fleet
+  policy:
+    type: Buffer
+    buffer:
+      bufferSize: 20%
+      minReplicas: 3
+      maxReplicas: 150
