@@ -26,13 +26,15 @@ Infraestructura: Terraform · Despliegue: GitHub Actions → Amazon ECR
 | IaC | Terraform (VPC, EKS, ECR, Agones, Lambda, DynamoDB, Cluster Autoscaler) |
 
 ## 3. Cómputo para IA (práctica 3.1)
-Entrenamiento: bot PPO en CartPole (sustituto didáctico). **[COMPLETAR con `ia/entrenar_bot.py`]**
+Entrenamiento: bot PPO en CartPole (sustituto didáctico).
 | | CPU | GPU (T4) |
 |---|---|---|
-| Entrenamiento 100 000 pasos | **[ ]** s | **[ ]** s |
-| Latencia de inferencia | **[ ]** ms | — |
-| Decisiones/s por núcleo | **[ ]** | — |
-2 000 bots a 10 Hz = 20 000 inferencias/s → **[ ]** vCPU (con 30 % de margen), costo ≈ USD **[ ]**/h.
+| Entrenamiento 100 000 pasos | **138,0 s** | 217,6 s |
+| Latencia de inferencia | **0,416 ms** | 0,732 ms |
+| Decisiones/s por núcleo | **2 406** | 1 367 |
+| vCPU para 2 000 bots a 10 Hz (20 000 inf/s, +30 % margen) | **11** | 20 |
+| Costo de inferencia | **USD 0,47/h** | USD 0,85/h |
+La CPU entrenó 1,6 veces más rápido y sirvió 1,8 veces más decisiones por núcleo.
 *Conclusión:* con una red tan pequeña la GPU no gana por el costo de copiar datos; la inferencia va en CPU y la GPU se reserva para entrenar con Spot y checkpoints.
 
 ## 4. Contenedores y orquestación (práctica 3.3)
