@@ -32,7 +32,7 @@ resource "helm_release" "cluster_autoscaler" {
         annotations = { "eks.amazonaws.com/role-arn" = module.irsa_autoscaler.iam_role_arn }
       }
     }
-    extraArgs = { "scale-down-unneeded-time" = "5m" }
+    extraArgs = { "scale-down-unneeded-time" = "3m" }
   })]
 
   depends_on = [module.eks]
