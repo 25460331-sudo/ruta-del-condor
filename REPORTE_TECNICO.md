@@ -21,7 +21,7 @@ Infraestructura: Terraform · Despliegue: GitHub Actions → Amazon ECR
 | Servidor de partida | EKS 1.31 + Agones (nodos `t3.large`, 2–20) |
 | Imágenes | Amazon ECR (`condor-server`) |
 | Tabla de líderes | Lambda (Python 3.12) + DynamoDB |
-| Streaming (prueba) | S3 + CloudFront **[COMPLETAR]** |
+| Streaming (prueba) | S3 privado + CloudFront (OAC) |
 | Observabilidad | Prometheus + Grafana (kube-prometheus-stack) |
 | IaC | Terraform (VPC, EKS, ECR, Agones, Lambda, DynamoDB, Cluster Autoscaler) |
 
@@ -63,7 +63,14 @@ Gráficas: `evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png` y los tabl
 2. **El techo fue la cuota de vCPU.** Los nodos se detuvieron en 8 (= 16 vCPU). El autoescalador respondió bien; el límite lo puso la cuenta.
 3. **La latencia medida por los clientes es poco confiable** (RTT mediana de 31 a 120 ms en la rampa, p95 de 230 ms a 2,1 s según el pod): los pods generadores compiten por CPU con los servidores. La medida del servidor (tick p99) no tiene ese sesgo. Mejora: generadores en nodos aparte.
 4. Un primer intento con un solo pod de Locust de 1 CPU falló (el generador perdió sus procesos por falta de CPU), por eso se repartió en 4 pods.
-*Extrapolación de espectadores:* 20 000 × 6 000 kbps × 3 600 / (8 × 10⁶) = **54 000 GB ≈ 54 TB por hora**; por eso se sirve desde CDN con varias calidades (ABR). **[COMPLETAR si se hace la prueba de 200 espectadores]**
+**Espectadores (HLS a 360p, 800 kbps).** Video de prueba de 5 min en un bucket de S3 **privado** servido por **CloudFront** (Terraform: `infra/stream.tf`); 200 espectadores simulados (pod de Locust, un segmento de 2 s cada 2 s) durante 5 min.
+| Resultado | Valor |
+|---|---|
+| Peticiones (manifiesto + segmentos) | 59 093, **0 fallas** |
+| Latencia por segmento (mediana / p95 / p99) | **23 / 60 / 880 ms** (el reproductor aguanta hasta 2 000 ms sin cortes) |
+| Máximo | 2,1 s, un solo segmento aislado |
+| Datos transferidos | 6,4 GB en 5 min ≈ **77 GB/hora** (la fórmula da 72) |
+*Extrapolación de espectadores:* GB/hora = CCV × kbps × 3 600 / (8 × 10⁶). Con 20 000 espectadores a 6 000 kbps: **54 000 GB ≈ 54 TB por hora**; a precios de lista de CloudFront (≈ 0,085 USD/GB en los primeros 10 TB, con descuento por volumen) serían **≈ USD 4 300 por hora**. Por eso el video se sirve desde una CDN con varias calidades (ABR) y la capa de juego no lo toca: el servicio de partidas pasa de ~25 jugadores por nodo a costar centavos, mientras el *streaming* domina el costo. Limitación: el generador superó el 90 % de CPU, así que las latencias pueden ser algo pesimistas. Gráfica: `evidencias/3.4_grafica_espectadores.png`.
 
 ## 7. Serverless (práctica 3.5)
 Tabla de líderes con Lambda (Python 3.12) + DynamoDB, expuesta con una URL de función: guarda puntajes (POST) y devuelve el top 10 (GET). Probada con `curl` (`evidencias/3.5_tabla_lideres_funciona.png`).
