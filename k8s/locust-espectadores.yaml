@@ -1,0 +1,38 @@
+# Practica 3.4 - 200 espectadores HLS (360p) contra el S3 de prueba.
+# Antes:  kubectl create configmap locustfile --from-file=..\loadtest\locustfile.py
+# Uso:    kubectl apply -f locust-espectadores.yaml     Ver: kubectl logs job/espectadores --tail=5
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: espectadores
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: { fsGroup: 1000 }
+      containers:
+        - name: locust
+          image: locustio/locust:2.32.2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              pip install -q --target /tmp/libs websocket-client requests
+              export PYTHONPATH=/tmp/libs
+              cd /mnt/locust
+              echo "STREAM inicio: $(date -u +%H:%M:%S) UTC"
+              locust -f locustfile.py Espectador --host http://condor-stream-nube2026a.s3-website-us-east-1.amazonaws.com -u 200 -r 50 -t 5m --headless --only-summary --csv /results/stream
+              echo "STREAM fin: $(date -u +%H:%M:%S) UTC"
+              echo FIN
+              sleep 3600
+          resources:
+            requests: { cpu: "800m", memory: "256Mi" }
+            limits: { cpu: "1500m", memory: "512Mi" }
+          volumeMounts:
+            - { name: codigo, mountPath: /mnt/locust }
+            - { name: resultados, mountPath: /results }
+      volumes:
+        - name: codigo
+          configMap: { name: locustfile }
+        - name: resultados
+          emptyDir: {}
