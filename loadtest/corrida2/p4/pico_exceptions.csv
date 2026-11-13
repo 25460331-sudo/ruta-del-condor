@@ -1,0 +1,28 @@
+Count,Message,Traceback,Nodes
+30357,[Errno 32] Broken pipe,"  File ""/opt/venv/lib/python3.11/site-packages/locust/user/task.py"", line 340, in run
+    self.execute_next_task()
+  File ""/opt/venv/lib/python3.11/site-packages/locust/user/task.py"", line 373, in execute_next_task
+    self.execute_task(self._task_queue.popleft())
+  File ""/opt/venv/lib/python3.11/site-packages/locust/user/task.py"", line 490, in execute_task
+    task(self.user)
+  File ""/mnt/locust/locustfile.py"", line 69, in jugar
+    self.ws.send(json.dumps({""id"": self.id, ""name"": ""Bot"", ""x"": self.x, ""y"": self.y, ""z"": self.z, ""a"": self.a,
+  File ""/tmp/libs/websocket/_core.py"", line 338, in send
+    return self.send_frame(frame)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File ""/tmp/libs/websocket/_core.py"", line 378, in send_frame
+    bytes_sent = self._send(data)
+                 ^^^^^^^^^^^^^^^^
+  File ""/tmp/libs/websocket/_core.py"", line 639, in _send
+    return send(self.sock, data)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File ""/tmp/libs/websocket/_socket.py"", line 193, in send
+    return _send()
+           ^^^^^^^
+  File ""/tmp/libs/websocket/_socket.py"", line 167, in _send
+    return sock.send(data)
+           ^^^^^^^^^^^^^^^
+  File ""/opt/venv/lib/python3.11/site-packages/gevent/_socketcommon.py"", line 721, in send
+    return self._sock.send(data, flags)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+",local

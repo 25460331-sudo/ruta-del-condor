@@ -1,0 +1,4 @@
+Method,Name,Error,Occurrences
+WS,rtt,"ConnectionResetError(104, 'Connection reset by peer')",6
+WS,asignacion,HTTPError('429 Client Error: Too Many Requests for url: https://agones-allocator.agones-system.svc.cluster.local/gameserverallocation'),2
+WS,rtt,JSONDecodeError('Expecting value: line 1 column 1 (char 0)'),11

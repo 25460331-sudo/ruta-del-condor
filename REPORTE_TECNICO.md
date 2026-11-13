@@ -42,21 +42,28 @@ El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre c
 *¿Qué pasa si se borra un pod `Allocated`?* La partida en curso se pierde (los jugadores se desconectan) y la flota crea un servidor nuevo `Ready` para reponerlo; por eso Agones marca los pods asignados como no desalojables ante el autoescalado de nodos.
 
 ## 5. CI/CD (práctica 3.2)
-`push` a `main` → pruebas (`pytest`) → construcción de la imagen → publicación en ECR con la etiqueta del commit. Evidencia: captura del pipeline en verde **[COMPLETAR]**.
+`push` a `main` → pruebas (`pytest`) → construcción de la imagen → publicación en ECR con la etiqueta del commit. Evidencia: `evidencias/3.2_pipeline_verde.png` y `3.2_imagen_publicada_con_etiqueta_del_commit.png`.
 *Rollback:* cada versión es una imagen inmutable con la etiqueta del commit; volver atrás es apuntar `k8s/fleet.yaml` a la etiqueta anterior y aplicar; Agones reemplaza solo los servidores libres y deja terminar las partidas en curso (drenado).
 
 ## 6. Autoescalado, métricas y pruebas de carga (práctica 3.4)
-Tres capas: **partidas** (FleetAutoscaler, buffer 20 %), **servicios** (HPA) y **nodos** (Cluster Autoscaler).
-Métricas: CCU, latencia p95 (meta < 80 ms), duración del tick p99 (< 25 ms), servidores por estado, nodos.
-Escenarios Locust: rampa (**[ ]** jugadores, 2/s), pico (**[ ]** en 20 s) y **[ ]** espectadores a 360p.
+Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
+Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma región): cada bot manda su posición 20 veces por segundo y mide el RTT con un ping por segundo. Escenarios: **rampa** (200 jugadores a 2/s, 8 min) y **pico** (200 en ~20 s, 4 min). Versión reducida: la cuota de la cuenta era de 16 vCPU (solicitud de 96 abierta, sin respuesta a la fecha).
 | Resultado | Valor |
 |---|---|
-| Capacidad máxima medida (p95 cruza 80 ms) | **[ ]** jugadores |
-| Jugadores por nodo | **[ ]** |
-| Tiempo de reacción del escalado (servidores / nodos) | **[ ]** s / **[ ]** s |
-| Errores durante el pico | **[ ]** % |
-Gráficas: `rampa.png` (CCU vs p95), línea de tiempo de servidores y nodos, errores/rebuffering **[COMPLETAR]**.
-*Extrapolación de espectadores:* 20 000 × 6 000 kbps × 3 600 / (8 × 10⁶) = **54 000 GB ≈ 54 TB por hora**; por eso se sirve desde CDN con varias calidades (ABR).
+| Jugadores simultáneos sostenidos | **200** (27 servidores `Allocated`, 8 nodos) |
+| Jugadores por nodo | **≈ 25** con CPU de nodos entre 35 y 50 % |
+| Tick del servidor p99 (Prometheus) | **≤ 7,5 ms** (meta 25 ms); 0 mensajes rechazados |
+| Tiempo de reacción: servidores | **≈ 30–60 s** (de `Starting` a `Ready`) |
+| Tiempo de reacción: nodos | **≈ 2 min** (de 4 a 8 nodos entre 22:12 y 22:14) |
+| Errores en la rampa / en el pico | **0,43 % / 1,44 %** (resets de conexión y asignaciones 429) |
+| Rechazos del allocator (429) | 5 de 33 asignaciones, en la rampa y en el pico |
+Gráficas: `evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png` y los tableros de Grafana de cada corrida.
+**Hallazgos.**
+1. **`bufferSize` de 20 % no alcanza para un pico.** En la primera corrida solo se conectaron ~52 jugadores: con pocos servidores asignados el 20 % deja 1 o 2 libres y el allocator respondía `429`. Con un buffer fijo de **12 servidores libres** la flota creció a 27 asignados y el CCU llegó a 200.
+2. **El techo fue la cuota de vCPU.** Los nodos se detuvieron en 8 (= 16 vCPU). El autoescalador respondió bien; el límite lo puso la cuenta.
+3. **La latencia medida por los clientes es poco confiable** (RTT mediana de 31 a 120 ms en la rampa, p95 de 230 ms a 2,1 s según el pod): los pods generadores compiten por CPU con los servidores. La medida del servidor (tick p99) no tiene ese sesgo. Mejora: generadores en nodos aparte.
+4. Un primer intento con un solo pod de Locust de 1 CPU falló (el generador perdió sus procesos por falta de CPU), por eso se repartió en 4 pods.
+*Extrapolación de espectadores:* 20 000 × 6 000 kbps × 3 600 / (8 × 10⁶) = **54 000 GB ≈ 54 TB por hora**; por eso se sirve desde CDN con varias calidades (ABR). **[COMPLETAR si se hace la prueba de 200 espectadores]**
 
 ## 7. Serverless (práctica 3.5)
 Tabla de líderes con Lambda + DynamoDB (URL de la función pública): guarda puntajes y devuelve el top 10. Probada con `curl` (ver `evidencias/3.5_*.png`). Prueba de carga a 500 usuarios (80 % lecturas / 20 % escrituras) y efecto del arranque en frío en el p99: **[COMPLETAR]**.
@@ -65,17 +72,21 @@ Tabla de líderes con Lambda + DynamoDB (URL de la función pública): guarda pu
 ## 8. Infraestructura como código (práctica 3.6)
 Todo vive en `infra/` y se crea con `terraform apply` en ~20 min y se borra con `terraform destroy`. Evidencia: `plan` revisado en un pull request **[COMPLETAR]** y `destroy` completo sin recursos huérfanos **[COMPLETAR]**. Lección aprendida: las credenciales temporales de AWS vencen durante el `apply`; Terraform retoma donde quedó.
 
-## 9. Costos
+## 9. Costos (estimados, us-east-1; confirmar en la calculadora de AWS)
 | Concepto | USD/h |
 |---|---|
 | Plano de control EKS | 0,10 |
-| Nodos (**[ ]** × `t3.large`) | **[ ]** |
-| Balanceadores y otros | **[ ]** |
-| **Total** | **[ ]** |
-Costo por jugador/hora = total ÷ jugadores sostenidos = **[COMPLETAR]**. (Precios: confirmar en la calculadora de AWS; varían por región y con el tiempo.)
+| Nodos en reposo (2 × `t3.large`, 0,0832) | 0,17 |
+| Nodos en pico (8 × `t3.large`) | 0,67 |
+| Balanceador (allocator) y otros | ≈ 0,03 |
+| **Total en reposo / en pico** | **≈ 0,30 / ≈ 0,80** |
+**Costo por jugador/hora en pico** ≈ 0,80 ÷ 200 = **USD 0,004** (≈ 25 jugadores por nodo). Con el escalado a la baja (nodos fuera de pico) el costo medio baja hacia el de reposo.
 
-## 10. Recomendaciones **[COMPLETAR con los datos]**
-`bufferSize` de Agones, tipo de máquina, mínimo de nodos y número de regiones, justificados con la capacidad y el tiempo de reacción medidos.
+## 10. Recomendaciones
+- **`bufferSize`: 12 servidores fijos** (no 20 %) y `minReplicas` igual al buffer; subir proporcionalmente si se esperan picos más rápidos que 30–60 s (lo que tarda un servidor en estar listo).
+- **Nodos:** `t3.large`, mínimo 2 y máximo 20; ≈ 25 jugadores por nodo. Pedir la cuota de vCPU antes de cualquier evento grande.
+- **Regiones:** una (us-east-1) para el prototipo; para jugadores lejanos, una flota por región con matchmaking por latencia.
+- **Medición:** generadores de carga en nodos separados para que la latencia no se contamine.
 
 ## 11. Seguridad y limitaciones
 Auditoría completa en `AUDITORIA.md`: se corrigieron XSS por nombres, datos de red sin validar y un servidor sin límites (tamaño, ritmo, campos permitidos). Riesgos abiertos: el cliente decide puntos y daños (posible trampa), bots locales por navegador y sin TLS (`wss`) en el servidor.
