@@ -1,0 +1,36 @@
+# Práctica 3.5 — 500 usuarios contra la tabla de líderes.
+# Antes:  kubectl create configmap locusttabla --from-file=..\loadtest\locust_tabla.py
+# Uso:    kubectl apply -f locust-tabla.yaml     Ver:  kubectl logs job/tabla --tail=5
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tabla
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: { fsGroup: 1000 }
+      containers:
+        - name: locust
+          image: locustio/locust:2.32.2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cd /mnt/locust
+              echo "TABLA inicio: $(date -u +%H:%M:%S) UTC"
+              locust -f locust_tabla.py --host https://vdoicyeadhedwkmzxvl2dxstlq0vzmka.lambda-url.us-east-1.on.aws -u 500 -r 25 -t 4m --headless --only-summary --csv /results/tabla
+              echo "TABLA fin: $(date -u +%H:%M:%S) UTC"
+              echo FIN
+              sleep 3600
+          resources:
+            requests: { cpu: "800m", memory: "256Mi" }
+            limits: { cpu: "1500m", memory: "512Mi" }
+          volumeMounts:
+            - { name: codigo, mountPath: /mnt/locust }
+            - { name: resultados, mountPath: /results }
+      volumes:
+        - name: codigo
+          configMap: { name: locusttabla }
+        - name: resultados
+          emptyDir: {}
