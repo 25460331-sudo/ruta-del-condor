@@ -1,0 +1,175 @@
+{
+ "title": "Ruta del Condor - Carga",
+ "uid": "condor-carga",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "5s",
+ "time": {
+  "from": "now-30m",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "Jugadores conectados (CCU)",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "sum(condor_players_connected)",
+     "legendFormat": "CCU",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "Tick p99 (ms) - meta < 25",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 0,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.99, sum by (le) (rate(condor_tick_seconds_bucket[1m]))) * 1000",
+     "legendFormat": "p99",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "timeseries",
+   "title": "Servidores por estado",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 0,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "sum by (type) (agones_gameservers_count{fleet_name=\"condor-fleet\"})",
+     "legendFormat": "{{type}}",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "Nodos del cluster",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 8,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "count(kube_node_info)",
+     "legendFormat": "nodos",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Mensajes rechazados/s",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 8,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(condor_messages_rejected_total[1m]))",
+     "legendFormat": "rechazados",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "CPU de los nodos (%)",
+   "datasource": {
+    "type": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 8,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "expr": "100 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m]))*100",
+     "legendFormat": "CPU",
+     "refId": "A"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   }
+  }
+ ]
+}
