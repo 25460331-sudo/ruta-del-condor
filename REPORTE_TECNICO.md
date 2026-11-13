@@ -87,7 +87,10 @@ Tabla de líderes con Lambda (Python 3.12) + DynamoDB, expuesta con una URL de f
 *Costo:* 5 M consultas al mes de 50 ms y 256 MB = 62 500 GB-s, dentro de la capa gratuita de cómputo (400 000 GB-s); solo se cobran 4 M de peticiones por encima del millón gratis: **≈ USD 0,80 al mes**. Una VM `t3.medium` encendida todo el mes cuesta **≈ USD 30** (0,0416 × 730 h) y habría que dimensionarla, parchearla y escalarla a mano.
 
 ## 8. Infraestructura como código (práctica 3.6)
-Todo vive en `infra/` y se crea con `terraform apply` en ~20 min y se borra con `terraform destroy`. Evidencia: `plan` revisado en un pull request **[COMPLETAR]** y `destroy` completo sin recursos huérfanos **[COMPLETAR]**. Lección aprendida: las credenciales temporales de AWS vencen durante el `apply`; Terraform retoma donde quedó.
+Todo vive en `infra/` (VPC, EKS, ECR, Agones, Lambda, DynamoDB, Cluster Autoscaler, S3 + CloudFront) y se crea con `terraform apply` en ~20 min y se borra con `terraform destroy`.
+**Flujo de cambios con revisión:** los cambios de infraestructura se proponen en un *pull request* con el `terraform plan` en la descripción. Ejemplo: PR #1 (`evidencias/3.6_pull_request_plan.png`) cambia el tiempo en que el autoescalador baja nodos sin uso de 5 a 3 min; el plan muestra **0 para crear, 1 para cambiar, 0 para destruir** y se revisa antes de aplicar. Plan del autoescalador original: `evidencias/3.6_terraform_plan_autoescalador.png`.
+**Evidencia de `apply` y de `destroy`:** `evidencias/3.6_terraform_apply_completo.png` y **[COMPLETAR: captura del `destroy` completo, sin recursos huérfanos]**.
+**Lecciones aprendidas:** (1) las credenciales temporales de AWS vencen durante el `apply` y Terraform retoma donde quedó; (2) un recambio de nodos se trabó porque Agones protege los servidores de juego con una regla de no desalojo: hubo que vaciar la flota; (3) el autoescalador debe ser de la misma versión que Kubernetes (1.31); (4) un bucket público fue rechazado por la protección de la cuenta, por eso el video se sirve con CloudFront y bucket privado. Mejora pendiente: estado remoto en S3 con bloqueo.
 
 ## 9. Costos (estimados, us-east-1; confirmar en la calculadora de AWS)
 | Concepto | USD/h |
