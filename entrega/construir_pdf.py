@@ -3,6 +3,23 @@ import pathlib, re, subprocess, markdown
 
 raiz = pathlib.Path(__file__).resolve().parent.parent
 md = (raiz / "REPORTE_TECNICO.md").read_text(encoding="utf-8")
+def arreglar(texto):
+    """Pone una línea en blanco antes de tablas y listas (lo exige este conversor)."""
+    out, dentro_codigo = [], False
+    for linea in texto.split(chr(10)):
+        if linea.startswith("```"):
+            dentro_codigo = not dentro_codigo
+        if not dentro_codigo and out and out[-1].strip():
+            ant = out[-1]
+            if linea.startswith("|") and not ant.startswith("|"):
+                out.append("")
+            elif (linea.startswith("- ") or linea[:3] in ("1. ", "2. ", "3. ", "4. ")) and not (ant.startswith("-") or ant[:1].isdigit()):
+                out.append("")
+        out.append(linea)
+    return chr(10).join(out)
+
+
+md = arreglar(md)
 cuerpo = markdown.markdown(md, extensions=["tables", "fenced_code"])
 css = """
 @page { size: A4; margin: 13mm 14mm; }
