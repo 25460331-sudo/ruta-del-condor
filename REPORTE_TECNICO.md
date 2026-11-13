@@ -1,8 +1,6 @@
 # Ruta del Cóndor — Reporte técnico (Unidad 3)
 **Autores:** Diego Reyes Natilla · José Heriberto Osorio · **Nube:** AWS (us-east-1) · **Fecha:** 16/11/2026
 
-> **BORRADOR.** Los textos marcados **[COMPLETAR]** dependen de mediciones que todavía no se hicieron. Máximo 6 páginas: recortar al final.
-
 ## 1. Resumen
 *Ruta del Cóndor* es una carrera aérea multijugador en 3D (hasta 8 aviones por partida) con bots, mejoras que duran toda la partida, clima dinámico y tabla de líderes global. Se desplegó en AWS con contenedores, Kubernetes + Agones, serverless e infraestructura como código, y se validó con pruebas de carga que simulan jugadores y espectadores.
 
@@ -47,7 +45,7 @@ El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre c
 
 ## 6. Autoescalado, métricas y pruebas de carga (práctica 3.4)
 Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
-Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma región): cada bot manda su posición 20 veces por segundo y mide el RTT con un ping por segundo. Escenarios: **rampa** (200 jugadores a 2/s, 8 min) y **pico** (200 en ~20 s, 4 min). Versión reducida: la cuota de la cuenta era de 16 vCPU (solicitud de 96 abierta, sin respuesta a la fecha).
+Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma región): cada bot manda su posición 20 veces por segundo y mide el RTT con un ping por segundo. Escenarios: **rampa** (200 jugadores a 2/s, 8 min) y **pico** (200 en ~20 s, 4 min). Versión reducida (200 en vez de 1 000 jugadores): durante las pruebas la cuota de la cuenta era de 16 vCPU; el aumento a 96 se aprobó el 13/11, después de las corridas.
 | Resultado | Valor |
 |---|---|
 | Jugadores simultáneos sostenidos | **200** (27 servidores `Allocated`, 8 nodos) |
@@ -57,10 +55,13 @@ Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma 
 | Tiempo de reacción: nodos | **≈ 2 min** (de 4 a 8 nodos entre 22:12 y 22:14) |
 | Errores en la rampa / en el pico | **0,43 % / 1,44 %** (resets de conexión y asignaciones 429) |
 | Rechazos del allocator (429) | 5 de 33 asignaciones, en la rampa y en el pico |
-Gráficas: `evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png` y los tableros de Grafana de cada corrida.
+Gráficas: tablero de Grafana de la corrida 2 (CCU, tick p99, servidores por estado y nodos 4 → 8) y las de Locust (`evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png`).
+
+<img src="evidencias/3.4_grafana_corrida2_rampa.png" style="width:78%;display:block;margin:4px auto">
+
 **Hallazgos.**
 1. **`bufferSize` de 20 % no alcanza para un pico.** En la primera corrida solo se conectaron ~52 jugadores: con pocos servidores asignados el 20 % deja 1 o 2 libres y el allocator respondía `429`. Con un buffer fijo de **12 servidores libres** la flota creció a 27 asignados y el CCU llegó a 200.
-2. **El techo fue la cuota de vCPU.** Los nodos se detuvieron en 8 (= 16 vCPU). El autoescalador respondió bien; el límite lo puso la cuenta.
+2. **El techo fue la cuota de vCPU.** Los nodos se detuvieron en 8 (= 16 vCPU). El autoescalador respondió bien; el límite lo puso la cuenta (ya aprobada a 96 vCPU, lo que permitiría unos 1 000 jugadores).
 3. **La latencia medida por los clientes es poco confiable** (RTT mediana de 31 a 120 ms en la rampa, p95 de 230 ms a 2,1 s según el pod): los pods generadores compiten por CPU con los servidores. La medida del servidor (tick p99) no tiene ese sesgo. Mejora: generadores en nodos aparte.
 4. Un primer intento con un solo pod de Locust de 1 CPU falló (el generador perdió sus procesos por falta de CPU), por eso se repartió en 4 pods.
 **Espectadores (HLS a 360p, 800 kbps).** Video de prueba de 5 min en un bucket de S3 **privado** servido por **CloudFront** (Terraform: `infra/stream.tf`); 200 espectadores simulados (pod de Locust, un segmento de 2 s cada 2 s) durante 5 min.
@@ -83,7 +84,7 @@ Tabla de líderes con Lambda (Python 3.12) + DynamoDB, expuesta con una URL de f
 | Duración dentro de Lambda (CloudWatch) | mínima 6 ms · media 75 ms · **máxima 609 ms** (arranque en frío) |
 | Concurrencia alcanzada / throttles | **tope plano en 10** / hasta **24 262 por minuto** |
 | Primeros segundos (arranque en frío) | p95 ≈ 1 000 ms mientras Lambda crea los primeros entornos |
-**Hallazgo:** la función respondió muy rápido cuando atendió, pero la cuenta tiene un tope de **10 ejecuciones simultáneas** (`aws lambda get-account-settings`; capturas `evidencias/3.5_lambda_*.png`), así que Lambda rechazó lo que excedía. Serverless escala solo, pero dentro de las cuotas de la cuenta: hay que pedir el aumento (solicitud de 1 000 enviada) antes de un evento real. Mejoras de diseño: guardar el top 10 en caché (por ejemplo 5 s) para que las lecturas no lleguen a la función, y cambiar el `scan` de DynamoDB por un índice.
+**Hallazgo:** la función respondió muy rápido cuando atendió, pero la cuenta tiene un tope de **10 ejecuciones simultáneas** (`aws lambda get-account-settings`; capturas `evidencias/3.5_lambda_*.png`), así que Lambda rechazó lo que excedía. Serverless escala solo, pero dentro de las cuotas de la cuenta: hay que pedir el aumento (a 1 000) antes de un evento real. Mejoras de diseño: guardar el top 10 en caché (por ejemplo 5 s) para que las lecturas no lleguen a la función, y cambiar el `scan` de DynamoDB por un índice.
 *Costo:* 5 M consultas al mes de 50 ms y 256 MB = 62 500 GB-s, dentro de la capa gratuita de cómputo (400 000 GB-s); solo se cobran 4 M de peticiones por encima del millón gratis: **≈ USD 0,80 al mes**. Una VM `t3.medium` encendida todo el mes cuesta **≈ USD 30** (0,0416 × 730 h) y habría que dimensionarla, parchearla y escalarla a mano.
 
 ## 8. Infraestructura como código (práctica 3.6)
@@ -110,3 +111,19 @@ Todo vive en `infra/` (VPC, EKS, ECR, Agones, Lambda, DynamoDB, Cluster Autoscal
 
 ## 11. Seguridad y limitaciones
 Auditoría completa en `AUDITORIA.md`: se corrigieron XSS por nombres, datos de red sin validar y un servidor sin límites (tamaño, ritmo, campos permitidos). Riesgos abiertos: el cliente decide puntos y daños (posible trampa), bots locales por navegador y sin TLS (`wss`) en el servidor.
+
+## 12. Anexo: evidencias
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<figure style="width:32%;margin:0"><img src="evidencias/3.1_colab_cpu.png" style="width:100%"><figcaption style="font-size:7.5pt">3.1 CPU en Colab</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.1_colab_gpu_T4.png" style="width:100%"><figcaption style="font-size:7.5pt">3.1 GPU T4 en Colab</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.2_pipeline_verde.png" style="width:100%"><figcaption style="font-size:7.5pt">3.2 Pipeline en verde</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.2_imagen_publicada_con_etiqueta_del_commit.png" style="width:100%"><figcaption style="font-size:7.5pt">3.2 Imagen con la etiqueta del commit</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.3_gameservers_despues_Allocated.png" style="width:100%"><figcaption style="font-size:7.5pt">3.3 Servidores: uno pasa a Allocated</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_grafana_corrida2_pico_200.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Pico de 200 jugadores</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_autoescalado_nodos_2_a_3.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Autoescalado de nodos</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_stream_cloudfront_reproduciendo.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Stream por CloudFront</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.5_lambda_throttles_concurrencia_10.png" style="width:100%"><figcaption style="font-size:7.5pt">3.5 Lambda: concurrencia 10 y throttles</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.6_pull_request_plan.png" style="width:100%"><figcaption style="font-size:7.5pt">3.6 Pull request con el plan</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.6_terraform_apply_completo.png" style="width:100%"><figcaption style="font-size:7.5pt">3.6 terraform apply completo</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_solicitud_cuota_vcpu.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Cuota de vCPU aprobada (96)</figcaption></figure>
+</div>
