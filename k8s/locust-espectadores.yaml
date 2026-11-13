@@ -21,7 +21,7 @@ spec:
               export PYTHONPATH=/tmp/libs
               cd /mnt/locust
               echo "STREAM inicio: $(date -u +%H:%M:%S) UTC"
-              locust -f locustfile.py Espectador --host http://condor-stream-nube2026a.s3-website-us-east-1.amazonaws.com -u 200 -r 50 -t 5m --headless --only-summary --csv /results/stream
+              locust -f locustfile.py Espectador --host https://d32sgguhd7pub5.cloudfront.net -u 200 -r 50 -t 5m --headless --only-summary --csv /results/stream
               echo "STREAM fin: $(date -u +%H:%M:%S) UTC"
               echo FIN
               sleep 3600
