@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences
+GET,GET top10,HTTPError('429 Client Error: Too Many Requests for url: GET top10'),73530
+POST,POST puntaje,HTTPError('429 Client Error: Too Many Requests for url: POST puntaje'),18116

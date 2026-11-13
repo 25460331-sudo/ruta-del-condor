@@ -66,8 +66,16 @@ Gráficas: `evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png` y los tabl
 *Extrapolación de espectadores:* 20 000 × 6 000 kbps × 3 600 / (8 × 10⁶) = **54 000 GB ≈ 54 TB por hora**; por eso se sirve desde CDN con varias calidades (ABR). **[COMPLETAR si se hace la prueba de 200 espectadores]**
 
 ## 7. Serverless (práctica 3.5)
-Tabla de líderes con Lambda + DynamoDB (URL de la función pública): guarda puntajes y devuelve el top 10. Probada con `curl` (ver `evidencias/3.5_*.png`). Prueba de carga a 500 usuarios (80 % lecturas / 20 % escrituras) y efecto del arranque en frío en el p99: **[COMPLETAR]**.
-*Costo:* 5 M consultas/mes de 50 ms y 256 MB ≈ 62 500 GB-s, dentro de la capa gratuita de Lambda, frente a una VM encendida todo el mes (≈ USD **[ ]**).
+Tabla de líderes con Lambda (Python 3.12) + DynamoDB, expuesta con una URL de función: guarda puntajes (POST) y devuelve el top 10 (GET). Probada con `curl` (`evidencias/3.5_tabla_lideres_funciona.png`).
+**Prueba de carga:** 500 usuarios (80 % lecturas / 20 % escrituras), rampa de 25 usuarios/s durante 4 min, desde un pod de Locust en el clúster (`loadtest/locust_tabla.py`, resultados en `loadtest/tabla/`).
+| Resultado | Valor |
+|---|---|
+| Peticiones totales | 111 221 (≈ 465 por segundo) |
+| Respondidas correctamente (mediana / p95 / p99) | **15 ms / 100 ms / 130 ms** |
+| Rechazadas con `429 Too Many Requests` | **82 %** (91 646) |
+| Primeros segundos (arranque en frío) | p95 ≈ 1 000 ms mientras Lambda crea los primeros entornos |
+**Hallazgo:** la función respondió muy rápido cuando atendió, pero la cuenta tiene un tope de **10 ejecuciones simultáneas** (`aws lambda get-account-settings`), así que Lambda rechazó lo que excedía. Serverless escala solo, pero dentro de las cuotas de la cuenta: hay que pedir el aumento (solicitud de 1 000 enviada) antes de un evento real. Mejoras de diseño: guardar el top 10 en caché (por ejemplo 5 s) para que las lecturas no lleguen a la función, y cambiar el `scan` de DynamoDB por un índice.
+*Costo:* 5 M consultas al mes de 50 ms y 256 MB = 62 500 GB-s, dentro de la capa gratuita de cómputo (400 000 GB-s); solo se cobran 4 M de peticiones por encima del millón gratis: **≈ USD 0,80 al mes**. Una VM `t3.medium` encendida todo el mes cuesta **≈ USD 30** (0,0416 × 730 h) y habría que dimensionarla, parchearla y escalarla a mano.
 
 ## 8. Infraestructura como código (práctica 3.6)
 Todo vive en `infra/` y se crea con `terraform apply` en ~20 min y se borra con `terraform destroy`. Evidencia: `plan` revisado en un pull request **[COMPLETAR]** y `destroy` completo sin recursos huérfanos **[COMPLETAR]**. Lección aprendida: las credenciales temporales de AWS vencen durante el `apply`; Terraform retoma donde quedó.
