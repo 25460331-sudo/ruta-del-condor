@@ -7,6 +7,7 @@ name: condor-server-ci
 on:
   push:
     branches: [main]
+    paths: ["server/**", ".github/workflows/**"]   # solo cuando cambia el servidor o el pipeline
   workflow_dispatch:
 
 env:
@@ -45,6 +46,10 @@ jobs:
           docker push $IMG:latest
           echo "Imagen publicada: $IMG:${{ github.sha }}"
 
-      # Paso 3 (despliegue a la flota): se hace a mano con
-      #   kubectl set image / sed en k8s/fleet.yaml + kubectl apply -f k8s/fleet.yaml
-      # Agones reemplaza los servidores libres y deja terminar las partidas en curso (drenado).
+      - name: Actualizar la flota de Agones (despliegue)
+        run: |
+          IMG=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+          aws eks update-kubeconfig --name condor-default --region ${{ env.AWS_REGION }}
+          kubectl patch fleet condor-fleet --type=json             -p="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/template/spec/containers/0/image\",\"value\":\"$IMG\"}]"
+          kubectl get fleet condor-fleet
+          # Agones reemplaza los servidores libres por la versión nueva y deja terminar las partidas en curso (drenado).
