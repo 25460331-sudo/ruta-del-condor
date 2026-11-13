@@ -8,5 +8,5 @@ spec:
     type: Buffer
     buffer:
       bufferSize: 12
-      minReplicas: 3
+      minReplicas: 12
       maxReplicas: 40
