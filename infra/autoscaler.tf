@@ -25,6 +25,7 @@ resource "helm_release" "cluster_autoscaler" {
   values = [yamlencode({
     autoDiscovery = { clusterName = module.eks.cluster_name }
     awsRegion     = var.region
+    image         = { tag = "v1.31.2" }   # debe coincidir con la versión de Kubernetes del clúster (1.31)
     rbac = {
       serviceAccount = {
         name        = "cluster-autoscaler"

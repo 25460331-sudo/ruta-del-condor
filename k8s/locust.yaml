@@ -15,7 +15,8 @@ spec:
       command: ["/bin/sh", "-c"]
       args:
         - |
-          pip install -q --user websocket-client requests
+          pip install -q --target /tmp/libs websocket-client requests
+          export PYTHONPATH=/tmp/libs
           cd /mnt/locust
           echo "RAMPA inicio: $(date -u +%H:%M:%S) UTC"
           locust -f locustfile.py Jugador -u $USERS -r 2 -t 8m --headless --processes 2 --csv /results/rampa

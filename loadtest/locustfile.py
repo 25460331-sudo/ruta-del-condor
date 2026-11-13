@@ -40,11 +40,19 @@ class Jugador(User):                                   # 20 mensajes por segundo
             return DIRECTO.replace("ws://", "")
         with Jugador.candado:                          # un solo pedido a la vez
             if Jugador.sala["cupo"] == 0:              # sala llena: pide otro servidor
-                t0 = time.perf_counter()
-                r = requests.post(ALLOCATOR, json=PEDIDO, timeout=10, **CERTS)
-                r.raise_for_status()
-                gs = r.json()
-                medir("asignacion", t0)
+                for _ in range(60):                    # sin servidores libres (429/503): espera y reintenta
+                    t0 = time.perf_counter()
+                    try:
+                        r = requests.post(ALLOCATOR, json=PEDIDO, timeout=10, **CERTS)
+                        r.raise_for_status()
+                        gs = r.json()
+                        medir("asignacion", t0)
+                        break
+                    except Exception as e:
+                        medir("asignacion", t0, e)     # cuenta como error del escalado
+                        time.sleep(2)
+                else:
+                    raise RuntimeError("sin servidores tras 2 minutos")
                 Jugador.sala = {"addr": f"{gs['address']}:{gs['ports'][0]['port']}", "cupo": JUGADORES_POR_SALA}
             Jugador.sala["cupo"] -= 1
             return Jugador.sala["addr"]
