@@ -1,49 +1,54 @@
-# Práctica 3.4 — generador de carga DENTRO del clúster (misma región, sin VM aparte).
+# Práctica 3.4 — generador de carga DENTRO del clúster, repartido en 4 pods (así ninguno se ahoga de CPU).
 # Antes:  kubectl create configmap locustfile --from-file=..\loadtest\locustfile.py
-# Uso:    kubectl apply -f locust.yaml      Ver:  kubectl logs -f locust
-# Cambiar jugadores: editar USERS (200 por la cuota de vCPU; 1000 si aprueban el aumento).
-apiVersion: v1
-kind: Pod
+# Uso:    kubectl apply -f locust.yaml      Ver:  kubectl get pods -l job-name=locust
+# Total de jugadores = parallelism x USERS  (4 x 50 = 200; con más cuota de vCPU: USERS=250 -> 1000).
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: locust
 spec:
-  restartPolicy: Never
-  securityContext: { fsGroup: 1000 }
-  containers:
-    - name: locust
-      image: locustio/locust:2.32.2
-      command: ["/bin/sh", "-c"]
-      args:
-        - |
-          pip install -q --target /tmp/libs websocket-client requests
-          export PYTHONPATH=/tmp/libs
-          cd /mnt/locust
-          echo "RAMPA inicio: $(date -u +%H:%M:%S) UTC"
-          locust -f locustfile.py Jugador -u $USERS -r 2 -t 8m --headless --processes 2 --csv /results/rampa
-          echo "RAMPA fin: $(date -u +%H:%M:%S) UTC"
-          sleep 60
-          echo "PICO inicio: $(date -u +%H:%M:%S) UTC"
-          locust -f locustfile.py Jugador -u $USERS -r 50 -t 4m --headless --processes 2 --csv /results/pico
-          echo "PICO fin: $(date -u +%H:%M:%S) UTC"
-          echo FIN
-          sleep 7200
-      env:
-        - { name: USERS, value: "200" }
-        - { name: ALLOCATOR_URL, value: "https://agones-allocator.agones-system.svc.cluster.local/gameserverallocation" }
-        - { name: CERT, value: "/certs/tls.crt" }
-        - { name: KEY, value: "/certs/tls.key" }
-        - { name: VERIFY_TLS, value: "0" }      # solo laboratorio
-      resources:
-        requests: { cpu: "1", memory: "512Mi" }
-        limits: { cpu: "2", memory: "1Gi" }
-      volumeMounts:
-        - { name: codigo, mountPath: /mnt/locust }
-        - { name: certs, mountPath: /certs, readOnly: true }
-        - { name: resultados, mountPath: /results }
-  volumes:
-    - name: codigo
-      configMap: { name: locustfile }
-    - name: certs
-      secret: { secretName: allocator-client.default }
-    - name: resultados
-      emptyDir: {}
+  parallelism: 4
+  completions: 4
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: { fsGroup: 1000 }
+      containers:
+        - name: locust
+          image: locustio/locust:2.32.2
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              pip install -q --target /tmp/libs websocket-client requests
+              export PYTHONPATH=/tmp/libs
+              cd /mnt/locust
+              echo "RAMPA inicio: $(date -u +%H:%M:%S) UTC"
+              locust -f locustfile.py Jugador -u $USERS -r 0.5 -t 8m --headless --only-summary --csv /results/rampa
+              echo "RAMPA fin: $(date -u +%H:%M:%S) UTC"
+              sleep 60
+              echo "PICO inicio: $(date -u +%H:%M:%S) UTC"
+              locust -f locustfile.py Jugador -u $USERS -r 12 -t 4m --headless --only-summary --csv /results/pico
+              echo "PICO fin: $(date -u +%H:%M:%S) UTC"
+              echo FIN
+              sleep 7200
+          env:
+            - { name: USERS, value: "50" }
+            - { name: ALLOCATOR_URL, value: "https://agones-allocator.agones-system.svc.cluster.local/gameserverallocation" }
+            - { name: CERT, value: "/certs/tls.crt" }
+            - { name: KEY, value: "/certs/tls.key" }
+            - { name: VERIFY_TLS, value: "0" }      # solo laboratorio
+          resources:
+            requests: { cpu: "800m", memory: "256Mi" }
+            limits: { cpu: "1500m", memory: "512Mi" }
+          volumeMounts:
+            - { name: codigo, mountPath: /mnt/locust }
+            - { name: certs, mountPath: /certs, readOnly: true }
+            - { name: resultados, mountPath: /results }
+      volumes:
+        - name: codigo
+          configMap: { name: locustfile }
+        - name: certs
+          secret: { secretName: allocator-client.default }
+        - name: resultados
+          emptyDir: {}
