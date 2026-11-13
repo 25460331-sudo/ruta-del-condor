@@ -40,7 +40,7 @@ El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre c
 *¿Qué pasa si se borra un pod `Allocated`?* La partida en curso se pierde (los jugadores se desconectan) y la flota crea un servidor nuevo `Ready` para reponerlo; por eso Agones marca los pods asignados como no desalojables ante el autoescalado de nodos.
 
 ## 5. CI/CD (práctica 3.2)
-`push` a `main` → pruebas (`pytest`) → construcción de la imagen → publicación en ECR con la etiqueta del commit. Evidencia: `evidencias/3.2_pipeline_verde.png` y `3.2_imagen_publicada_con_etiqueta_del_commit.png`.
+`push` a `main` (cuando cambia `server/` o el pipeline) → pruebas (`pytest`) → construcción de la imagen → publicación en ECR con la etiqueta del commit → **actualización de la flota de Agones** (`kubectl patch` de la imagen; Agones reemplaza los servidores libres y deja terminar las partidas en curso). Comprobado: la flota corre la imagen `condor-server:2ef4e12…`, el commit del pipeline #8 (`evidencias/3.2_pipeline_actualiza_flota.png`). Evidencia: `evidencias/3.2_pipeline_verde.png` y `3.2_imagen_publicada_con_etiqueta_del_commit.png`.
 *Rollback:* cada versión es una imagen inmutable con la etiqueta del commit; volver atrás es apuntar `k8s/fleet.yaml` a la etiqueta anterior y aplicar; Agones reemplaza solo los servidores libres y deja terminar las partidas en curso (drenado).
 
 ## 6. Autoescalado, métricas y pruebas de carga (práctica 3.4)
