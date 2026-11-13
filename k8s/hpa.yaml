@@ -1,0 +1,21 @@
+# Capa de PODS del autoescalado: el allocator de Agones (servicio sin estado que asigna servidores a los jugadores)
+# sube de 1 a 5 réplicas cuando su CPU supera el 40 % de lo pedido.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: allocator-hpa
+  namespace: agones-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agones-allocator
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 40

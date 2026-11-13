@@ -86,6 +86,15 @@ resource "helm_release" "agones" {
     name  = "agones.allocator.replicas"
     value = "1"
   }
+  # CPU pedida por el allocator: sin "requests" el HPA no puede calcular el porcentaje de uso
+  set {
+    name  = "agones.allocator.resources.requests.cpu"
+    value = "100m"
+  }
+  set {
+    name  = "agones.allocator.resources.requests.memory"
+    value = "64Mi"
+  }
   # El servicio "ping" de Agones usa un balanceador UDP que no necesitamos
   set {
     name  = "agones.ping.install"

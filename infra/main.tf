@@ -1,11 +1,19 @@
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.10"
   required_providers {
     aws     = { source = "hashicorp/aws", version = "~> 5.60" }
     helm    = { source = "hashicorp/helm", version = "~> 2.13" }
     archive = { source = "hashicorp/archive", version = "~> 2.4" }
   }
-  # Estado local (simple para el laboratorio). Para equipo: backend "s3" con bloqueo.
+  # Estado remoto en S3 con bloqueo (trabajo en equipo sin pisarse). El bucket se crea una sola vez a mano
+  # (huevo y gallina: el estado no puede vivir dentro de lo que él mismo crea) y sobrevive al destroy.
+  backend "s3" {
+    bucket       = "condor-tfstate-130841269953"
+    key          = "condor/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
