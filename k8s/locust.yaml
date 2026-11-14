@@ -7,8 +7,8 @@ kind: Job
 metadata:
   name: locust
 spec:
-  parallelism: 4
-  completions: 4
+  parallelism: 8
+  completions: 8
   backoffLimit: 0
   template:
     spec:

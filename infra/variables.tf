@@ -16,5 +16,5 @@ variable "nodos_min" {
 
 variable "nodos_max" {
   type    = number
-  default = 20
+  default = 30
 }
