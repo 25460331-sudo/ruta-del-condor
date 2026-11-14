@@ -44,7 +44,7 @@ El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre c
 *Rollback:* cada versión es una imagen inmutable con la etiqueta del commit; volver atrás es apuntar `k8s/fleet.yaml` a la etiqueta anterior y aplicar; Agones reemplaza solo los servidores libres y deja terminar las partidas en curso (drenado).
 
 ## 6. Autoescalado, métricas y pruebas de carga (práctica 3.4)
-Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA del allocator, `k8s/hpa.yaml`; queda definido pero sin medición de CPU, pues `metrics-server` se agregó al código en `infra/metricas.tf` sin llegar a aplicarse) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
+Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA del allocator, `k8s/hpa.yaml`; con `metrics-server` instalado por Terraform: mide la CPU del allocator, `cpu: 2%/40%`) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
 Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma región): cada bot manda su posición 20 veces por segundo y mide el RTT con un ping por segundo. Escenarios: **rampa** (200 jugadores a 2/s, 8 min) y **pico** (200 en ~20 s, 4 min). Versión reducida (200 en vez de 1 000 jugadores): durante las pruebas la cuota de la cuenta era de 16 vCPU; el aumento a 96 se aprobó el 13/11, después de las corridas.
 | Resultado | Valor |
 |---|---|
@@ -58,6 +58,8 @@ Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma 
 Gráficas: tablero de Grafana de la corrida 2 (CCU, tick p99, servidores por estado y nodos 4 → 8) y las de Locust (`evidencias/3.4_grafica_rampa.png`, `3.4_grafica_pico.png`).
 
 <img src="evidencias/3.4_grafana_corrida2_rampa.png" style="width:78%;display:block;margin:4px auto">
+
+**Corrida 3: versión reducida de 300 jugadores (4 pods × 75), con la cuota ya en 96 vCPU.** Los nodos pasaron de **3 a 11** durante la prueba (Cluster Autoscaler) y el pico simultáneo medido fue de **~208 en la rampa y ~225 en el pico** (no se llegó a los 300 planeados). Errores: **0,68 % en la rampa y 6,08 % en el pico**, con 7 y 10 asignaciones rechazadas (429) y RTT p95 de 0,4 a 7 s según el pod (generadores compitiendo por CPU). El **HPA** del allocator midió `cpu: 2%/40%` y se mantuvo en 1 réplica: el allocator no se acercó al umbral, así que no escaló; queda demostrado que mide, no que escale bajo presión. Evidencias: `evidencias/3.4_corrida3_nodos_11_hpa.png`, `rampa_corrida3.png`, `pico_corrida3.png`. Conclusión: con un solo allocator y generadores en los mismos nodos, el sistema sostiene ~200–225 jugadores con pocos errores y degrada la latencia y las asignaciones al acercarse a 300; el siguiente paso sería más réplicas del allocator y generadores en nodos aparte.
 
 **Hallazgos.**
 1. **`bufferSize` de 20 % no alcanza para un pico.** En la primera corrida solo se conectaron ~52 jugadores: con pocos servidores asignados el 20 % deja 1 o 2 libres y el allocator respondía `429`. Con un buffer fijo de **12 servidores libres** la flota creció a 27 asignados y el CCU llegó a 200.
