@@ -134,5 +134,6 @@ Auditoría completa en `AUDITORIA.md`: se corrigieron XSS por nombres, datos de 
 <figure style="width:32%;margin:0"><img src="evidencias/3.4_servidor_allocated.png" style="width:100%"><figcaption style="font-size:7.5pt">Servidor Allocated en AWS</figcaption></figure>
 <figure style="width:32%;margin:0"><img src="evidencias/3.4_corrida4_grafana_600.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Corrida de 600 jugadores: Grafana</figcaption></figure>
 <figure style="width:32%;margin:0"><img src="evidencias/3.4_corrida4_600_nodos_20.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Nodos subiendo con 600 jugadores</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_corrida4_ccu_rampa_pausa_pico.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 CCU: rampa, pausa y pico (~525)</figcaption></figure>
 <figure style="width:32%;margin:0"><img src="evidencias/3.4_corrida4_hpa.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 HPA midiendo CPU</figcaption></figure>
 </div>
