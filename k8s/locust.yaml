@@ -33,7 +33,7 @@ spec:
               echo FIN
               sleep 7200
           env:
-            - { name: USERS, value: "50" }
+            - { name: USERS, value: "75" }
             - { name: ALLOCATOR_URL, value: "https://agones-allocator.agones-system.svc.cluster.local/gameserverallocation" }
             - { name: CERT, value: "/certs/tls.crt" }
             - { name: KEY, value: "/certs/tls.key" }
