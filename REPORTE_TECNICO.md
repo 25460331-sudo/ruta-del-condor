@@ -36,7 +36,7 @@ La CPU entrenó 1,6 veces más rápido y sirvió 1,8 veces más decisiones por n
 *Conclusión:* con una red tan pequeña la GPU no gana por el costo de copiar datos; la inferencia va en CPU y la GPU se reserva para entrenar con Spot y checkpoints.
 
 ## 4. Contenedores y orquestación (práctica 3.3)
-El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre como `GameServer` de Agones (estados `Ready → Allocated → Shutdown`). La flota mantiene servidores libres y el SDK de Agones recibe `/ready`, `/health` cada 2 s y `/shutdown` al terminar. Evidencia: `evidencias/3.3_*.png` (3 servidores `Ready`, uno pasa a `Allocated` al pedir partida).
+El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre como `GameServer` de Agones (estados `Ready → Allocated → Shutdown`). La flota mantiene servidores libres y el SDK de Agones recibe `/ready`, `/health` cada 2 s y `/shutdown` al terminar. Evidencia: `evidencias/3.3_*.png` (3 servidores `Ready`, uno pasa a `Allocated` al pedir partida). **Prueba de juego en la nube:** el cliente web (local) se conectó por WebSocket al servidor `Allocated` de EKS (`ec2-32-197-192-200…:7456`), con 4 pilotos en sala y latencia de 325 ms desde el cliente local; ver `evidencias/3.4_jugando_en_la_nube.png` y `3.4_servidor_allocated.png`.
 *¿Qué pasa si se borra un pod `Allocated`?* La partida en curso se pierde (los jugadores se desconectan) y la flota crea un servidor nuevo `Ready` para reponerlo; por eso Agones marca los pods asignados como no desalojables ante el autoescalado de nodos.
 
 ## 5. CI/CD (práctica 3.2)
@@ -44,7 +44,7 @@ El servidor (Python, WebSocket, 20 ticks/s) se empaqueta en una imagen y corre c
 *Rollback:* cada versión es una imagen inmutable con la etiqueta del commit; volver atrás es apuntar `k8s/fleet.yaml` a la etiqueta anterior y aplicar; Agones reemplaza solo los servidores libres y deja terminar las partidas en curso (drenado).
 
 ## 6. Autoescalado, métricas y pruebas de carga (práctica 3.4)
-Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
+Tres capas: **partidas** (FleetAutoscaler), **servicios** (HPA del allocator, `k8s/hpa.yaml`; queda definido pero sin medición de CPU, pues `metrics-server` se agregó al código en `infra/metricas.tf` sin llegar a aplicarse) y **nodos** (Cluster Autoscaler, `t3.large`, 2 a 20). Métricas en Prometheus + Grafana (`evidencias/3.4_*`): CCU, tick p99 (meta < 25 ms), servidores por estado, nodos, CPU y mensajes rechazados.
 Los jugadores simulados corren como 4 pods de Locust dentro del clúster (misma región): cada bot manda su posición 20 veces por segundo y mide el RTT con un ping por segundo. Escenarios: **rampa** (200 jugadores a 2/s, 8 min) y **pico** (200 en ~20 s, 4 min). Versión reducida (200 en vez de 1 000 jugadores): durante las pruebas la cuota de la cuenta era de 16 vCPU; el aumento a 96 se aprobó el 13/11, después de las corridas.
 | Resultado | Valor |
 |---|---|
@@ -126,4 +126,6 @@ Auditoría completa en `AUDITORIA.md`: se corrigieron XSS por nombres, datos de 
 <figure style="width:32%;margin:0"><img src="evidencias/3.6_pull_request_plan.png" style="width:100%"><figcaption style="font-size:7.5pt">3.6 Pull request con el plan</figcaption></figure>
 <figure style="width:32%;margin:0"><img src="evidencias/3.6_terraform_apply_completo.png" style="width:100%"><figcaption style="font-size:7.5pt">3.6 terraform apply completo</figcaption></figure>
 <figure style="width:32%;margin:0"><img src="evidencias/3.4_solicitud_cuota_vcpu.png" style="width:100%"><figcaption style="font-size:7.5pt">3.4 Cuota de vCPU aprobada (96)</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_jugando_en_la_nube.png" style="width:100%"><figcaption style="font-size:7.5pt">Jugando contra el servidor en EKS</figcaption></figure>
+<figure style="width:32%;margin:0"><img src="evidencias/3.4_servidor_allocated.png" style="width:100%"><figcaption style="font-size:7.5pt">Servidor Allocated en AWS</figcaption></figure>
 </div>
