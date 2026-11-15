@@ -1,5 +1,6 @@
-# Ruta del Cóndor — Reporte técnico (Unidad 3)
-**Autores:** Diego Reyes Natilla · José Heriberto Osorio · **Nube:** AWS (us-east-1) · **Fecha:** 16/11/2026
+# Ruta del Cóndor
+**Reporte técnico — Unidad 3: Infraestructura y despliegue de videojuegos en la nube** · Apps - Nube
+**Profesor:** Monico Joel Sanchez Velazco · **Integrantes:** Diego Reyes Natilla (25460331) · José Heriberto Osorio (25460721) · **Nube:** AWS (us-east-1) · **Fecha:** 16/11/2026
 
 ## 1. Resumen
 *Ruta del Cóndor* es una carrera aérea multijugador en 3D (hasta 8 aviones por partida) con bots, mejoras que duran toda la partida, clima dinámico y tabla de líderes global. Se desplegó en AWS con contenedores, Kubernetes + Agones, serverless e infraestructura como código, y se validó con pruebas de carga que simulan jugadores y espectadores.
